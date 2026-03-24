@@ -380,7 +380,12 @@ let IS_OFFLINE_MODE=LS.get('pw_offline')===true;
 
 async function sbFetch(path,opts={}){
   const res=await fetch(SB_URL+'/rest/v1/'+path,{
-    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':opts.prefer||''},
+    headers:{
+      'apikey':SB_KEY,
+      'Authorization':'Bearer '+SB_KEY,
+      'Content-Type':'application/json',
+      'Prefer': opts.prefer||'return=minimal'
+    },
     ...opts
   });
   if(!res.ok){const e=await res.text();throw new Error(e)}
@@ -1029,18 +1034,32 @@ function confirmDeleteMatch(id){
 function closeModal(){document.getElementById('modal').classList.remove('open');pendingDeleteType=null;pendingDeleteId=null}
 
 async function executeDelete(){
+  const type=pendingDeleteType;
+  const id=pendingDeleteId;
   closeModal();
+  if(!type||!id)return;
+  setSyncStatus('syncing','Deleting…');
   try{
-    if(pendingDeleteType==='player'){
-      const id=pendingDeleteId;
+    if(type==='player'){
       players=players.filter(p=>p.id!==id);
       matches=matches.map(m=>({...m,players:m.players.filter(p=>p.id!==id)})).filter(m=>m.players.length>0);
-      await deletePlayer(id);renderPlayers();setSyncStatus('ok','Synced');
-    }else if(pendingDeleteType==='match'){
-      const id=pendingDeleteId;matches=matches.filter(m=>m.id!==id);
-      await deleteMatch(id);renderHistory();setSyncStatus('ok','Synced');
+      await deletePlayer(id);
+      renderPlayers();
+      toast('🗑 Player deleted');
+      setSyncStatus('ok','Synced');
+    }else if(type==='match'){
+      matches=matches.filter(m=>m.id!==id);
+      await deleteMatch(id);
+      renderHistory();
+      toast('🗑 Match deleted');
+      setSyncStatus('ok','Synced');
     }
-  }catch(e){toast('❌ Delete failed: '+e.message);setSyncStatus('err','Sync error');await loadAll();}
+  }catch(e){
+    toast('❌ Delete failed: '+e.message);
+    setSyncStatus('err','Sync error');
+    await loadAll();
+    renderHistory();
+  }
 }
 document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
 
