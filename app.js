@@ -14,73 +14,60 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // AUTH
 // ═══════════════════════════════════════════════════════
 let currentUser = null;
+let authMode = 'signin'; // 'signin' | 'signup'
 
-async function sendOTP(){
+function toggleAuthMode(){
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  const isSignup = authMode === 'signup';
+  document.getElementById('authDesc').textContent = isSignup
+    ? 'Create an account to start tracking.'
+    : 'Sign in to access your tracker.';
+  document.getElementById('authBtn').textContent = isSignup ? 'Create Account' : 'Sign In';
+  document.getElementById('authToggleLink').textContent = isSignup ? 'Sign in instead' : 'Create an account';
+  document.getElementById('authPassword').autocomplete = isSignup ? 'new-password' : 'current-password';
+  document.getElementById('authErr').style.display = 'none';
+}
+
+async function handleAuth(){
   const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
   const err = document.getElementById('authErr');
-  const success = document.getElementById('authSuccess');
   const btn = document.getElementById('authBtn');
   err.style.display = 'none';
-  success.style.display = 'none';
 
   if(!email || !email.includes('@')){
     err.textContent = 'Please enter a valid email address.';
     err.style.display = 'block';
     return;
   }
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Sending…';
-
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true }
-  });
-
-  if(error){
-    err.textContent = error.message;
+  if(!password || password.length < 6){
+    err.textContent = 'Password must be at least 6 characters.';
     err.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = 'Send Code ✉️';
-  } else {
-    document.getElementById('authEmailSent').textContent = email;
-    success.style.display = 'block';
-    btn.innerHTML = '✅ Sent!';
+    return;
   }
-}
 
-async function verifyOTP(){
-  const email = document.getElementById('authEmail').value.trim();
-  const otp = document.getElementById('otp').value.trim();
-  const err = document.getElementById('authErr');
-  const btn = document.getElementById('verifyAuthBtn');
-  err.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Verifying…';
+  btn.innerHTML = `<span class="spinner"></span>${authMode === 'signup' ? 'Creating account…' : 'Signing in…'}`;
 
-  const { error } = await sb.auth.verifyOtp({
-    email,
-    token: otp,
-    type: 'email',
-  });
+  const { error } = authMode === 'signup'
+    ? await sb.auth.signUp({ email, password })
+    : await sb.auth.signInWithPassword({ email, password });
 
   if(error){
     err.textContent = error.message;
     err.style.display = 'block';
     btn.disabled = false;
-    btn.innerHTML = 'Verify Code';
+    btn.textContent = authMode === 'signup' ? 'Create Account' : 'Sign In';
   }
   // On success, onAuthStateChange handles showing the app
 }
 
-// Allow pressing Enter in email field to send OTP
+// Allow pressing Enter in either field to submit
 document.getElementById('authEmail').addEventListener('keydown', e => {
-  if(e.key === 'Enter') sendOTP();
+  if(e.key === 'Enter') document.getElementById('authPassword').focus();
 });
-
-// Allow pressing Enter in OTP field to verify
-document.getElementById('otp').addEventListener('keydown', e => {
-  if(e.key === 'Enter') verifyOTP();
+document.getElementById('authPassword').addEventListener('keydown', e => {
+  if(e.key === 'Enter') handleAuth();
 });
 
 async function signOut(){
@@ -90,9 +77,10 @@ async function signOut(){
   document.getElementById('syncBar').classList.add('hidden');
   document.getElementById('authScreen').classList.remove('hidden');
   document.getElementById('authBtn').disabled = false;
-  document.getElementById('authBtn').innerHTML = 'Send Code ✉️';
-  document.getElementById('authSuccess').style.display = 'none';
+  document.getElementById('authBtn').textContent = 'Sign In';
   document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  authMode = 'signin';
 }
 
 // Listen for auth state changes

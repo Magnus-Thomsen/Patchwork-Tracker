@@ -163,6 +163,17 @@ body {
   font-size: 1rem;
   margin-bottom: 6px;
 }
+.auth-toggle {
+  margin-top: 12px;
+  font-size: 0.75rem;
+}
+.auth-toggle a {
+  color: var(--terracotta);
+  text-decoration: none;
+}
+.auth-toggle a:hover {
+  text-decoration: underline;
+}
 .auth-note {
   font-size: 0.68rem;
   color: var(--brown-light);

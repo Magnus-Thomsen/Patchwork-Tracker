@@ -22,15 +22,13 @@
     <div class="auth-quilt" id="authQuilt"></div>
     <div class="auth-title">Patchwork</div>
     <div class="auth-sub">Score Tracker</div>
-    <div class="auth-desc">Enter your email and we'll send you a 6-digit code — no password needed.</div>
+    <div id="authDesc" class="auth-desc">Sign in to access your tracker.</div>
     <input class="auth-input" type="email" id="authEmail" placeholder="your@email.com" autocomplete="email">
-    <button class="auth-btn" id="authBtn" onclick="sendOTP()">Send Code ✉️</button>
+    <input class="auth-input" type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
+    <button class="auth-btn" id="authBtn" onclick="handleAuth()">Sign In</button>
     <div class="auth-err" id="authErr"></div>
-    <div class="auth-success" id="authSuccess">
-      <strong>✅ Check your inbox!</strong>
-      We've sent a 6-digit code to <span id="authEmailSent"></span>. Enter it below to sign in:
-      <input class="auth-input" type="text" id="otp" placeholder="000000" inputmode="numeric" autocomplete="one-time-code">
-      <button class="auth-btn" id="verifyAuthBtn" onclick="verifyOTP()">Verify Code</button>
+    <div class="auth-toggle">
+      <a href="#" id="authToggleLink" onclick="toggleAuthMode(); return false;">Create an account</a>
     </div>
     <div class="auth-note">Your data is private and only visible to you.</div>
   </div>
