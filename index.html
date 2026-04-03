@@ -525,9 +525,13 @@ function playerStats(pid){
   const avgScore=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
   const highScore=scores.length?Math.max(...scores):0;
   const empties=pm.map(m=>m.players.find(p=>p.id===pid)?.emptySpaces??null).filter(v=>v!==null);
+  const boardBtns=pm.map(m=>m.players.find(p=>p.id===pid)?.boardButtons??null).filter(v=>v!==null);
+  const avgBoardButtons=boardBtns.length?Math.round(boardBtns.reduce((a,b)=>a+b,0)/boardBtns.length):null;
+  const maxBoardButtons=boardBtns.length?Math.max(...boardBtns):null;
   return{played:pm.length,wins,losses:pm.length-wins,avgScore,highScore,
     winRate:pm.length?Math.round(wins/pm.length*100):0,
-    minEmpty:empties.length?Math.min(...empties):null};
+    minEmpty:empties.length?Math.min(...empties):null,
+    avgBoardButtons,maxBoardButtons};
 }
 
 function renderQuilt(){
@@ -625,7 +629,7 @@ function matchCard(m,showDel=false){
       ${i===0?'<div class="winner-crown">👑</div>':''}
       <div class="score-name"><div class="player-avatar" style="background:${pc};width:22px;height:22px;font-size:.65rem;border-radius:4px">${ini(pn)}</div>${pn}</div>
       <div class="score-big">${mp.score}</div>
-      <div class="score-detail">${mp.buttons!==undefined?`${mp.buttons} buttons · `:''}${mp.emptySpaces!==undefined?`${mp.emptySpaces} empty`:''}${mp.bonusTile?' · 🎯 7×7':''}</div>
+      <div class="score-detail">${mp.buttons!==undefined?`${mp.buttons} buttons · `:''}${mp.emptySpaces!==undefined?`${mp.emptySpaces} empty`:''}${mp.boardButtons!=null?` · 🔘 ${mp.boardButtons} on board`:''}${mp.bonusTile?' · 🎯 7×7':''}</div>
     </div>`;
   }).join('');
   return`<div class="match-entry">
@@ -664,6 +668,7 @@ function buildMpRow(mp,idx){
     <div class="form-row">
       <div class="form-group"><label>Buttons Earned</label><input type="number" min="0" max="999" placeholder="0" value="${mp.buttons??''}" oninput="mpField(${idx},'buttons',this.value)"></div>
       <div class="form-group"><label>Empty Spaces</label><input type="number" min="0" max="81" placeholder="0" value="${mp.emptySpaces??''}" oninput="mpField(${idx},'emptySpaces',this.value)"></div>
+      <div class="form-group"><label>Buttons on Board</label><input type="number" min="0" max="999" placeholder="0" value="${mp.boardButtons??''}" oninput="mpField(${idx},'boardButtons',this.value)"></div>
       <div class="form-group"><label>7×7 Bonus?</label>
         <select onchange="mpField(${idx},'bonusTile',this.value)">
           <option value="0"${!mp.bonusTile?' selected':''}>No</option>
@@ -702,7 +707,7 @@ async function saveMatch(){
   const btn=document.getElementById('saveMatchBtn');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Saving…';
   try{
-    const mp=matchPlayers.map(mp=>({id:mp.id,buttons:mp.buttons??0,score:calcScore(mp),emptySpaces:mp.emptySpaces??0,bonusTile:mp.bonusTile??false}));
+    const mp=matchPlayers.map(mp=>({id:mp.id,buttons:mp.buttons??0,score:calcScore(mp),emptySpaces:mp.emptySpaces??0,bonusTile:mp.bonusTile??false,boardButtons:mp.boardButtons??null}));
     const m={id:Date.now().toString(),date,players:mp};
     matches.push(m);await insertMatch(m);
     matchPlayers=[];toast('✅ Match saved!');setSyncStatus('ok','Synced');showPanel('dashboard');
@@ -982,6 +987,10 @@ function renderRecords(){
   });
   if(comeback.pid&&comeback.val>0) recs.push({icon:'💪',title:'Biggest Comeback',val:comeback.val,pid:comeback.pid,detail:`empty spaces & still won · ${comeback.date}`});
 
+  let mbb={val:-1,pid:null,date:''};
+  matches.forEach(m=>m.players.forEach(mp=>{if(mp.boardButtons!=null&&mp.boardButtons>mbb.val)mbb={val:mp.boardButtons,pid:mp.id,date:m.date}}));
+  if(mbb.pid&&mbb.val>-1) recs.push({icon:'🔘',title:'Most Buttons on Board',val:mbb.val,pid:mbb.pid,detail:`buttons on board · ${mbb.date}`});
+
   const cardsHtml=recs.map(r=>{
     const p=getPlayer(r.pid);if(!p)return'';
     return`<div class="stat-card" style="text-align:left;position:relative;overflow:hidden">
@@ -999,7 +1008,7 @@ function renderRecords(){
 
   const tableHtml=`<div class="section-title" style="margin-top:32px">Full Stats Comparison</div>
   <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto"><table>
-    <thead><tr><th>Player</th><th>Matches</th><th>Wins</th><th>Win %</th><th>Avg Score</th><th>Best Score</th><th>Fewest Empty</th></tr></thead>
+    <thead><tr><th>Player</th><th>Matches</th><th>Wins</th><th>Win %</th><th>Avg Score</th><th>Best Score</th><th>Fewest Empty</th><th>Avg Buttons on Board</th></tr></thead>
     <tbody>${players.map(p=>{const s=playerStats(p.id);return`<tr>
       <td><div style="display:flex;align-items:center;gap:10px">
         <div class="player-avatar" style="background:${p.color};width:28px;height:28px;font-size:.8rem">${ini(p.name)}</div>
@@ -1008,6 +1017,7 @@ function renderRecords(){
       <td>${s.played}</td><td>${s.wins}</td><td>${s.winRate}%</td><td>${s.avgScore||'–'}</td>
       <td style="color:var(--terracotta);font-weight:600">${s.highScore||'–'}</td>
       <td>${s.minEmpty!==null?s.minEmpty:'–'}</td>
+      <td>${s.avgBoardButtons!==null?s.avgBoardButtons:'–'}</td>
     </tr>`}).join('')}</tbody>
   </table></div></div>`;
 
